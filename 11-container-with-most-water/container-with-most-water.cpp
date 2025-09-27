@@ -10,7 +10,6 @@ public:
             int w = right - left;
             max_area = max(max_area, h * w);
 
-            // uzun kenarı bırak kısa kenarı ilerlet
             if (height[left] < height[right]) {
                 ++left;
             } else {

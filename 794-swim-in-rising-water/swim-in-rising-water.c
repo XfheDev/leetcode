@@ -1,83 +1,72 @@
-
-#include <stdio.h>
-#include <stdlib.h>
 #include <stdbool.h>
 
 #define MAXN 55
-#define INF 1000000000
+#define MOD 1000000007
 
 typedef struct {
     int h, x, y;
 } Node;
 
+typedef struct {
+    Node a[MAXN * MAXN];
+    int sz;
+} Heap;
 
-int cmp(const void *a, const void *b) {
-    return ((Node *)a)->h - ((Node *)b)->h;
+static inline void heap_swap(Node *a, Node *b) {
+    Node t = *a; *a = *b; *b = t;
 }
 
-
-typedef struct {
-    Node heap[MAXN * MAXN + 5];
-    int size;
-} MinHeap;
-
-void push(MinHeap *pq, Node val) {
-    pq->heap[++pq->size] = val;
-    int i = pq->size;
-    while (i > 1 && pq->heap[i].h < pq->heap[i / 2].h) {
-        Node tmp = pq->heap[i];
-        pq->heap[i] = pq->heap[i / 2];
-        pq->heap[i / 2] = tmp;
-        i /= 2;
+static inline void heap_push(Heap *h, Node v) {
+    int i = ++h->sz;
+    h->a[i] = v;
+    while (i > 1 && h->a[i].h < h->a[i >> 1].h) {
+        heap_swap(&h->a[i], &h->a[i >> 1]);
+        i >>= 1;
     }
 }
 
-Node pop(MinHeap *pq) {
-    Node res = pq->heap[1];
-    pq->heap[1] = pq->heap[pq->size--];
+static inline Node heap_pop(Heap *h) {
+    Node r = h->a[1];
+    h->a[1] = h->a[h->sz--];
     int i = 1;
     while (1) {
-        int l = i * 2, r = l + 1, smallest = i;
-        if (l <= pq->size && pq->heap[l].h < pq->heap[smallest].h) smallest = l;
-        if (r <= pq->size && pq->heap[r].h < pq->heap[smallest].h) smallest = r;
-        if (smallest == i) break;
-        Node tmp = pq->heap[i];
-        pq->heap[i] = pq->heap[smallest];
-        pq->heap[smallest] = tmp;
-        i = smallest;
+        int l = i << 1, rgt = l | 1, s = i;
+        if (l <= h->sz && h->a[l].h < h->a[s].h) s = l;
+        if (rgt <= h->sz && h->a[rgt].h < h->a[s].h) s = rgt;
+        if (s == i) break;
+        heap_swap(&h->a[i], &h->a[s]);
+        i = s;
     }
-    return res;
+    return r;
 }
-
-bool empty(MinHeap *pq) {
-    return pq->size == 0;
-}
-
-
-int dirs[4][2] = {{1,0},{-1,0},{0,1},{0,-1}};
-
 
 int swimInWater(int** grid, int n, int* gridColSize) {
-    bool visited[MAXN][MAXN] = {false};
-    MinHeap pq = {0};
+    static bool vis[MAXN][MAXN];
+    for (int i = 0; i < n; ++i)
+        for (int j = 0; j < n; ++j)
+            vis[i][j] = false;
 
-    push(&pq, (Node){grid[0][0], 0, 0});
-    visited[0][0] = true;
-    int maxElev = 0;
+    Heap pq = { .sz = 0 };
+    heap_push(&pq, (Node){grid[0][0], 0, 0});
+    vis[0][0] = true;
+    int maxH = 0;
 
-    while (!empty(&pq)) {
-        Node cur = pop(&pq);
-        if (cur.h > maxElev) maxElev = cur.h;
-        if (cur.x == n - 1 && cur.y == n - 1) return maxElev;
+    const int dx[4] = {1, -1, 0, 0};
+    const int dy[4] = {0, 0, 1, -1};
 
-        for (int d = 0; d < 4; d++) {
-            int nx = cur.x + dirs[d][0];
-            int ny = cur.y + dirs[d][1];
-            if (nx < 0 || ny < 0 || nx >= n || ny >= n) continue;
-            if (visited[nx][ny]) continue;
-            visited[nx][ny] = true;
-            push(&pq, (Node){grid[nx][ny], nx, ny});
+    while (pq.sz) {
+        Node cur = heap_pop(&pq);
+        if (cur.h > maxH) maxH = cur.h;
+        if (cur.x == n - 1 && cur.y == n - 1) return maxH;
+
+        for (int d = 0; d < 4; ++d) {
+            int nx = cur.x + dx[d];
+            int ny = cur.y + dy[d];
+            if ((unsigned)nx >= (unsigned)n || (unsigned)ny >= (unsigned)n) continue;
+            if (vis[nx][ny]) continue;
+            vis[nx][ny] = true;
+            heap_push(&pq, (Node){grid[nx][ny], nx, ny});
         }
     }
-    return -1;
+    return maxH; 
 }

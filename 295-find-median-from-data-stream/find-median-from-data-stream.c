@@ -1,87 +1,93 @@
 #include <stdlib.h>
 
 typedef struct {
-    int *data;
-    int size;
-    int capacity;
-    int isMinHeap; 
-} Heap;
+    int* max_h; 
+    int* min_h; 
+    int max_sz;
+    int min_sz;
+} MedianFinder;
 
-Heap* createHeap(int capacity, int isMinHeap) {
-    Heap* h = (Heap*)malloc(sizeof(Heap));
-    h->data = (int*)malloc(sizeof(int) * (capacity + 1));
-    h->size = 0;
-    h->capacity = capacity;
-    h->isMinHeap = isMinHeap;
-    return h;
-}
 
-void swap(int *a, int *b) {
-    int temp = *a;
-    *a = *b;
-    *b = temp;
-}
-
-void push(Heap* h, int val) {
-    h->data[++h->size] = val;
-    int cur = h->size;
-    while (cur > 1) {
-        int parent = cur / 2;
-        if (h->isMinHeap ? h->data[cur] < h->data[parent] : h->data[cur] > h->data[parent]) {
-            swap(&h->data[cur], &h->data[parent]);
-            cur = parent;
-        } else break;
+void max_push(int* heap, int* size, int val) {
+    int i = ++(*size);
+    while (i > 1 && val > heap[i / 2]) {
+        heap[i] = heap[i / 2];
+        i /= 2;
     }
+    heap[i] = val;
 }
 
-int pop(Heap* h) {
-    int top = h->data[1];
-    h->data[1] = h->data[h->size--];
-    int cur = 1;
-    while (cur * 2 <= h->size) {
-        int child = cur * 2;
-        if (child + 1 <= h->size && (h->isMinHeap ? h->data[child + 1] < h->data[child] : h->data[child + 1] > h->data[child])) {
-            child++;
-        }
-        if (h->isMinHeap ? h->data[child] < h->data[cur] : h->data[child] > h->data[cur]) {
-            swap(&h->data[cur], &h->data[child]);
-            cur = child;
-        } else break;
+
+int max_pop(int* heap, int* size) {
+    int top = heap[1];
+    int last = heap[(*size)--];
+    int i = 1, child;
+    while (i * 2 <= *size) {
+        child = i * 2;
+        if (child < *size && heap[child + 1] > heap[child]) child++;
+        if (last >= heap[child]) break;
+        heap[i] = heap[child];
+        i = child;
     }
+    heap[i] = last;
     return top;
 }
 
-typedef struct {
-    Heap* maxHeap; // Sol taraf (küçük sayılar)
-    Heap* minHeap; // Sağ taraf (büyük sayılar)
-} MedianFinder;
+
+void min_push(int* heap, int* size, int val) {
+    int i = ++(*size);
+    while (i > 1 && val < heap[i / 2]) {
+        heap[i] = heap[i / 2];
+        i /= 2;
+    }
+    heap[i] = val;
+}
+
+
+int min_pop(int* heap, int* size) {
+    int top = heap[1];
+    int last = heap[(*size)--];
+    int i = 1, child;
+    while (i * 2 <= *size) {
+        child = i * 2;
+        if (child < *size && heap[child + 1] < heap[child]) child++;
+        if (last <= heap[child]) break;
+        heap[i] = heap[child];
+        i = child;
+    }
+    heap[i] = last;
+    return top;
+}
 
 MedianFinder* medianFinderCreate() {
-    MedianFinder* mf = (MedianFinder*)malloc(sizeof(MedianFinder));
-    mf->maxHeap = createHeap(50001, 0);
-    mf->minHeap = createHeap(50001, 1);
-    return mf;
+    MedianFinder* obj = (MedianFinder*)malloc(sizeof(MedianFinder));
+
+    obj->max_h = (int*)malloc(sizeof(int) * 25005);
+    obj->min_h = (int*)malloc(sizeof(int) * 25005);
+    obj->max_sz = 0;
+    obj->min_sz = 0;
+    return obj;
 }
 
 void medianFinderAddNum(MedianFinder* obj, int num) {
-    push(obj->maxHeap, num);
-    push(obj->minHeap, pop(obj->maxHeap));
-    if (obj->minHeap->size > obj->maxHeap->size) {
-        push(obj->maxHeap, pop(obj->minHeap));
+    max_push(obj->max_h, &obj->max_sz, num);
+    
+    min_push(obj->min_h, &obj->min_sz, max_pop(obj->max_h, &obj->max_sz));
+    
+    if (obj->max_sz < obj->min_sz) {
+        max_push(obj->max_h, &obj->max_sz, min_pop(obj->min_h, &obj->min_sz));
     }
 }
 
 double medianFinderFindMedian(MedianFinder* obj) {
-    if (obj->maxHeap->size > obj->minHeap->size) {
-        return (double)obj->maxHeap->data[1];
+    if (obj->max_sz > obj->min_sz) {
+        return (double)obj->max_h[1];
     }
-    return (obj->maxHeap->data[1] + obj->minHeap->data[1]) / 2.0;
+    return (obj->max_h[1] + obj->min_h[1]) / 2.0;
 }
 
 void medianFinderFree(MedianFinder* obj) {
-    free(obj->maxHeap->data);
-    free(obj->maxHeap);
-    free(obj->minHeap->data);
-    free(obj->minHeap);
-    free(obj); //kod çalışmazsa yazılımı bırakıyorum 
+    free(obj->max_h);
+    free(obj->min_h);
+    free(obj); //kodu optimize ettim çalışmazsa harbici bırakıyom ya
 }
